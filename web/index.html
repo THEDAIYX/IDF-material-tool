@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IDF 材料提取工具</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <main class="page-shell">
+    <header class="topbar">
+      <div>
+        <div class="eyebrow">LOCAL ENGINEERING TOOL</div>
+        <h1>IDF 材料提取工具</h1>
+        <p class="subtitle">从 AVEVA E3D / Isodraft IDF 文件提取材料并输出 Excel</p>
+      </div>
+      <div class="service-pill"><span class="dot"></span>本地服务运行中</div>
+    </header>
+
+    <section class="workspace-grid">
+      <section class="card setup-card">
+        <div class="section-heading">
+          <div>
+            <div class="section-kicker">01 / 输入与输出</div>
+            <h2>选择文件</h2>
+          </div>
+          <span class="privacy-note">文件仅在本机处理</span>
+        </div>
+
+        <label class="field-label" for="idf-file">IDF 文件（可多选批量处理）</label>
+        <div class="file-row">
+          <input id="idf-file" type="file" accept=".idf,text/plain" multiple>
+          <span id="idf-name" class="file-name">尚未选择</span>
+        </div>
+
+        <div class="mode-section">
+          <label class="field-label">输出方式</label>
+          <div class="mode-switch" role="radiogroup" aria-label="输出方式">
+            <label class="mode-option active"><input type="radio" name="mode" value="new" checked><span>新建 Excel</span></label>
+            <label class="mode-option"><input type="radio" name="mode" value="custom"><span>写入自定义模板</span></label>
+          </div>
+        </div>
+
+        <div id="template-panel" class="template-panel hidden">
+          <label class="field-label" for="template-file">Excel 模板</label>
+          <div class="file-row">
+            <input id="template-file" type="file" accept=".xlsx,.xlsm">
+            <span id="template-name" class="file-name">尚未选择</span>
+          </div>
+          <div class="inline-fields">
+            <div>
+              <label class="field-label" for="sheet-name">目标工作表</label>
+              <input id="sheet-name" type="text" placeholder="留空使用第一个工作表">
+            </div>
+            <div>
+              <label class="field-label" for="header-row">表头行</label>
+              <input id="header-row" type="number" min="1" placeholder="自动识别">
+            </div>
+          </div>
+          <p class="help-text">程序会识别“材料编码 / Item Code”“数量 / Qty”等常见表头，未识别字段会追加到最右侧。</p>
+        </div>
+
+        <div class="actions">
+          <button id="preview-btn" class="button secondary">识别材料</button>
+          <button id="export-btn" class="button primary" disabled>导出 Excel</button>
+        </div>
+        <div id="message" class="message" role="status"></div>
+      </section>
+
+      <section class="card preview-card">
+        <div class="section-heading">
+          <div>
+            <div class="section-kicker">02 / 识别结果</div>
+            <h2>管件明细预览</h2>
+          </div>
+          <div id="stats" class="stats">等待文件</div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead id="preview-head"><tr><th>管件明细</th></tr></thead>
+            <tbody id="preview-body"><tr><td colspan="1" class="empty-state">选择 IDF 文件后点击“识别材料”</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+
+    <footer class="footer-note">支持本地启动开关：<code>start_local.bat start</code> / <code>stop</code> / <code>status</code></footer>
+  </main>
+  <script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+__pycache__/
+*.py[cod]
+.idf_material_web.pid
+.idf_material_web.log
+*.xlsx
+*.xlsm
+*.idf
