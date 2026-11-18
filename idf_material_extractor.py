@@ -460,6 +460,10 @@ def extract_idf(path: str | Path) -> dict[str, Any]:
             continue
         material = material_by_index.get(component.item_index)
         description = material.description if material else ""
+        # IDF 中类型 40/42 可能是 Olet 的辅助几何记录，偶尔复用主管的
+        # PIPE 材料指针；这类记录不应再次计入管子材料明细。
+        if component.type_id in {40, 42} and "PIPE" in description.upper():
+            continue
         nominal_diameter, wall_thickness, pressure_rating = parse_spec_dimensions(description, component.bore)
         unit, quantity = component_unit_quantity(component)
         sx, sy, sz = component.start_mm
