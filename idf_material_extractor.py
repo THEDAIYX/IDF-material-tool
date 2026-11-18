@@ -98,6 +98,7 @@ TYPE_NAMES = {
 
 SPECIAL_TYPES = {0, 3, 148, 149, 150, 151, 152, 153, 160, 161, 200, 201, 300, 301}
 NON_PHYSICAL_TYPES = {0, 3, 148, 149, 151, 152, 153, 160, 161, 200, 201, 300, 301, 999}
+PIPE_TYPES = {100, 101, 102, 103, 104}
 KNOWN_HEADER_RECORDS = {
     -5: "生成程序",
     -6: "管线号",
@@ -262,6 +263,14 @@ def parse_spec_dimensions(description: str, bore: int | str = "") -> tuple[str, 
 def bom_control_value(component: Component) -> int:
     """Word 11 的百位控制 BOM：0=进入 BOM，1=不进入 BOM。"""
     return (_safe_int(component.word11) // 100) % 10
+
+
+def component_unit_quantity(component: Component) -> tuple[str, float | int]:
+    """管子按坐标长度计米，其余实体按件计数。"""
+    if component.type_id in PIPE_TYPES:
+        length_m = round((component.length_mm or 0) / 1000.0, 3)
+        return "米", length_m
+    return "个", 1
 
 
 def read_idf(path: str | Path) -> tuple[list[str], str]:
@@ -452,19 +461,21 @@ def extract_idf(path: str | Path) -> dict[str, Any]:
         material = material_by_index.get(component.item_index)
         description = material.description if material else ""
         nominal_diameter, wall_thickness, pressure_rating = parse_spec_dimensions(description, component.bore)
+        unit, quantity = component_unit_quantity(component)
         sx, sy, sz = component.start_mm
         ex, ey, ez = component.end_mm
         detail_rows.append(
             {
                 "来源文件名": Path(path).name,
+                "管线号": header.get(-6, ""),
                 "公称管径": nominal_diameter,
                 "壁厚等级": wall_thickness,
                 "压力等级": pressure_rating,
                 "材料指针": material.index if material else "",
                 "材料编码": material.code if material else "",
                 "材料描述": material.description if material else "",
-                "数量": 1,
-                "单位": "EA",
+                "数量": quantity,
+                "单位": unit,
                 "组件类型": component.type_name,
                 "类型号": component.type_id,
                 "管径/尺寸字段": component.bore or "",
@@ -497,25 +508,26 @@ def extract_idf(path: str | Path) -> dict[str, Any]:
 
     grouped: dict[tuple[Any, ...], dict[str, Any]] = {}
     for row in (row for row in detail_rows if row["材料指针"] != ""):
-        key = (row["材料指针"], row["公称管径"], row["壁厚等级"], row["压力等级"], row["管道规格"])
+        key = (row["材料指针"], row["公称管径"], row["壁厚等级"], row["压力等级"], row["管道规格"], row["单位"])
         if key not in grouped:
             grouped[key] = {
                 "材料指针": row["材料指针"],
                 "材料编码": row["材料编码"],
                 "材料描述": row["材料描述"],
                 "数量": 0,
-                "单位": "EA",
+                "单位": row["单位"],
                 "组件类型": set(),
                 "管径/尺寸字段": set(),
                 "管道规格": set(),
                 "唯一组件号": [],
                 "来源文件": Path(path).name,
+                "管线号": header.get(-6, ""),
                 "公称管径": row["公称管径"],
                 "壁厚等级": row["壁厚等级"],
                 "压力等级": row["压力等级"],
             }
         item = grouped[key]
-        item["数量"] += 1
+        item["数量"] += row["数量"]
         if row["组件类型"]:
             item["组件类型"].add(row["组件类型"])
         if row["管径/尺寸字段"] != "":
@@ -530,13 +542,14 @@ def extract_idf(path: str | Path) -> dict[str, Any]:
         summary_rows.append(
             {
                 "来源文件名": item["来源文件"],
+                "管线号": item["管线号"],
                 "公称管径": item["公称管径"],
                 "壁厚等级": item["壁厚等级"],
                 "压力等级": item["压力等级"],
                 "材料指针": item["材料指针"],
                 "材料编码": item["材料编码"],
                 "材料描述": item["材料描述"],
-                "数量": item["数量"],
+                "数量": round(item["数量"], 3) if item["单位"] == "米" else int(item["数量"]),
                 "单位": item["单位"],
                 "组件类型": "、".join(sorted(item["组件类型"])),
                 "管径/尺寸字段": "、".join(sorted(item["管径/尺寸字段"], key=lambda x: float(x))),
@@ -591,6 +604,7 @@ def extract_idfs(paths: Iterable[str | Path]) -> dict[str, Any]:
 
 SUMMARY_HEADERS = [
     "来源文件名",
+    "管线号",
     "公称管径",
     "壁厚等级",
     "压力等级",
@@ -608,6 +622,7 @@ SUMMARY_HEADERS = [
 
 DETAIL_HEADERS = [
     "来源文件名",
+    "管线号",
     "公称管径",
     "壁厚等级",
     "压力等级",
@@ -648,6 +663,7 @@ DETAIL_HEADERS = [
 
 HEADER_ALIASES = {
     "来源文件名": {"来源文件名", "sourcefilename", "filename", "文件名"},
+    "管线号": {"管线号", "管线编号", "linenumber", "line number", "lineid", "line"},
     "公称管径": {"公称管径", "nominaldiameter", "dn", "diameter"},
     "壁厚等级": {"壁厚等级", "壁厚", "schedule", "sch", "wallthickness"},
     "压力等级": {"压力等级", "压力级别", "pressureclass", "pressure", "cl", "pn"},
